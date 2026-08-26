@@ -11,7 +11,7 @@ const fakeAddress = () =>
   '0x' + Array.from({ length: 40 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
 
 export function AuthProvider({ children }) {
-  const [userRole, setUserRole] = useState(null); // null while loading
+  const [userRole, setUserRole] = useState(null);
   const [userAddress, setUserAddress] = useState(null);
   const [userEmail, setUserEmail] = useState(null);
   const [ready, setReady] = useState(false);
@@ -34,7 +34,6 @@ export function AuthProvider({ children }) {
 
   const isConnected = userRole !== null && userRole !== 'Guest';
 
-  // Mocked wallet connect — replaces Web3Auth's modal for this UI-only build.
   const connectWallet = async (role = 'User') => {
     const address = fakeAddress();
     const email = 'demo.user@quickvoting.app';

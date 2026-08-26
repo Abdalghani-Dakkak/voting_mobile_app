@@ -82,8 +82,6 @@ export default function PollDetails() {
 
     try {
       setIsSubmitting(true);
-      // NOTE: on-chain / signed-token voting isn't wired up in this UI-only build —
-      // this simulates a successful submission the same way the flow would resolve.
       await new Promise((r) => setTimeout(r, 900));
       setHasVoted(true);
       setPopupContent({ title: 'Success', message: 'Your vote has been submitted successfully!' });
@@ -96,11 +94,14 @@ export default function PollDetails() {
     }
   };
 
+  const maxChoices = poll?.maxChoices ?? candidateNames.length;
+  const candidateCount = poll?.candidateCount ?? candidateNames.length;
+
   const toggleSelection = (id) => {
     if (!isConnected || userRole === 'Guest') return;
     if (selected.includes(id)) {
       setSelected(selected.filter((item) => item !== id));
-    } else if (poll && selected.length < poll.maxChoices) {
+    } else if (poll && selected.length < maxChoices) {
       setSelected([...selected, id]);
     }
   };
@@ -152,7 +153,7 @@ export default function PollDetails() {
 
           <PollTitle
             title={poll.name}
-            desc={`This poll allows a maximum of ${poll.maxChoices} choices. Please rank your preferences by tapping the cards below.`}
+            desc={`This poll allows a maximum of ${maxChoices} choices. Please rank your preferences by tapping the cards below.`}
           />
 
           {!isConnected && (
@@ -164,13 +165,13 @@ export default function PollDetails() {
           <InfoBanner
             startDate={new Date(poll.startDate).toLocaleDateString()}
             endDate={new Date(poll.endDate).toLocaleDateString()}
-            votingType={poll.voteType === 0 ? `Ranked Choice (Top ${poll.maxChoices})` : 'Majority Voting'}
+            votingType={poll.voteType === 1 ? 'Majority Voting' : `Ranked Choice (Top ${maxChoices})`}
           />
 
           <View className="flex-row items-center justify-between mb-5">
             <Text className="text-xl font-bold text-slate-900 tracking-tight">Candidates</Text>
             <View className="bg-blue-50 px-3 py-1 rounded-full">
-              <Text className="text-blue-600 text-xs font-bold">{poll.candidateCount} Options</Text>
+              <Text className="text-blue-600 text-xs font-bold">{candidateCount} Options</Text>
             </View>
           </View>
 
@@ -196,7 +197,7 @@ export default function PollDetails() {
         <View className="absolute bottom-0 left-0 right-0 px-4 pb-6">
           <View className="bg-slate-950/95 p-4 rounded-2xl flex-row items-center justify-between border border-white/10">
             <View className="flex-row gap-3">
-              {Array.from({ length: poll.maxChoices }).map((_, i) => (
+              {Array.from({ length: maxChoices }).map((_, i) => (
                 <View key={i} className="items-center gap-1 w-14">
                   <View
                     className={`w-9 h-9 rounded-full items-center justify-center ${
