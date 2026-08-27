@@ -50,6 +50,30 @@ Set it via `app.json` → `expo.extra.apiUrl`, e.g.:
 }
 ```
 
+## Development builds (EAS)
+
+This project uses `expo-dev-client`, so native modules (reanimated, masked-view, etc.) work outside of Expo Go.
+
+```bash
+npm install -g eas-cli   # once
+eas login                # once, with your Expo account
+eas init                 # once, links this repo to an EAS project (writes extra.eas.projectId to app.json)
+
+# build an installable dev client
+eas build --profile development --platform android
+eas build --profile development-simulator --platform ios   # iOS Simulator, no Apple account needed
+
+# after installing the dev client on your device/emulator, run:
+npm run start:dev-client
+```
+
+Build profiles live in `eas.json`:
+
+- `development` — dev-client build (Android APK / iOS device build) for local iteration
+- `development-simulator` — iOS Simulator build for local iteration without a device
+- `preview` — internal-distribution APK for sharing with testers
+- `production` — store-ready build (`autoIncrement` bumps the build number)
+
 ## Stack
 
 - Expo SDK 57 + Expo Router (file-based routing in `app/`)

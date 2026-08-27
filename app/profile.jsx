@@ -16,12 +16,11 @@ import {
 import ScreenLayout from '../src/components/layout/ScreenLayout';
 import ProfileHeader from '../src/components/profile/ProfileHeader';
 import { useAuth } from '../src/context/AuthContext';
-
-const ROLES = ['User', 'Organization', 'Auditor'];
+import { updateSelf } from '../src/api/client';
 
 export default function Profile() {
   const router = useRouter();
-  const { userAddress, userEmail, userRole, isConnected, ready, disconnect, connectWallet } = useAuth();
+  const { userAddress, userEmail, userFullName, userRole, isConnected, ready, disconnect } = useAuth();
 
   const [copied, setCopied] = useState(false);
   const [username, setUsername] = useState('');
@@ -32,6 +31,10 @@ export default function Profile() {
   useEffect(() => {
     if (ready && !isConnected) router.replace('/signup');
   }, [ready, isConnected]);
+
+  useEffect(() => {
+    if (userFullName) setUsername(userFullName);
+  }, [userFullName]);
 
   const handleCopy = async () => {
     if (!userAddress) return;
@@ -56,11 +59,17 @@ export default function Profile() {
   };
 
   const handleSave = async () => {
+    if (!username.trim()) return;
     setSaving(true);
     setMessage(null);
-    await new Promise((r) => setTimeout(r, 500));
-    setMessage('Profile saved successfully!');
-    setSaving(false);
+    try {
+      await updateSelf({ fullName: username.trim() });
+      setMessage('Profile saved successfully!');
+    } catch (err) {
+      setMessage(err.message || 'Could not save your profile.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const formatAddress = (addr) => (addr ? `${addr.substring(0, 8)}...${addr.substring(addr.length - 6)}` : 'Not connected');
@@ -138,23 +147,6 @@ export default function Profile() {
             <Pressable onPress={handleCopy} className="p-1.5 rounded-md active:bg-[#E2E8F0]">
               {copied ? <CheckCircle2 size={18} color="#10B981" /> : <Copy size={18} color="#64748B" />}
             </Pressable>
-          </View>
-        </View>
-
-        <View className="gap-2 mb-6">
-          <Text className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Demo role (testing only)</Text>
-          <View className="flex-row gap-2">
-            {ROLES.map((role) => (
-              <Pressable
-                key={role}
-                onPress={() => connectWallet(role)}
-                className={`px-3 py-2 rounded-lg border ${
-                  userRole === role ? 'bg-brand-blue border-brand-blue' : 'bg-white border-slate-200'
-                }`}
-              >
-                <Text className={`text-xs font-bold ${userRole === role ? 'text-white' : 'text-slate-600'}`}>{role}</Text>
-              </Pressable>
-            ))}
           </View>
         </View>
 

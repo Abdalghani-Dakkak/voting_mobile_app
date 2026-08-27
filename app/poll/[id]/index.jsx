@@ -18,6 +18,7 @@ import InfoBanner from '../../../src/components/pollDetails/InfoBanner';
 import PollTitle from '../../../src/components/pollDetails/PollTitle';
 import Popup from '../../../src/components/shared/Popup';
 import { fetchPollDetails, fetchCandidates } from '../../../src/api/client';
+import { getPollDetailsFromChain, checkHasUserVoted, checkIsAllowedVoter } from '../../../src/chain/readFromChain';
 import { useAuth } from '../../../src/context/AuthContext';
 
 const metaAssets = [
@@ -32,7 +33,7 @@ const metaAssets = [
 export default function PollDetails() {
   const { id: pollId } = useLocalSearchParams();
   const router = useRouter();
-  const { userRole, isConnected } = useAuth();
+  const { userRole, isConnected, userAddress } = useAuth();
 
   const [loading, setLoading] = useState(true);
   const [poll, setPoll] = useState(null);
@@ -40,6 +41,7 @@ export default function PollDetails() {
   const [selected, setSelected] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasVoted, setHasVoted] = useState(false);
+  const [isAllowedVoter, setIsAllowedVoter] = useState(true);
 
   const [popupOpen, setPopupOpen] = useState(false);
   const [popupContent, setPopupContent] = useState({ title: '', message: '' });
@@ -52,8 +54,34 @@ export default function PollDetails() {
           fetchPollDetails(pollId),
           fetchCandidates({ pollId }),
         ]);
-        setPoll(pollRes.poll);
-        setCandidateNames((candRes.candidates || []).map((c) => c.name));
+        let mergedPoll = pollRes.poll;
+        let names = (candRes.candidates || []).map((c) => c.name);
+
+        // Polls created via the website are also deployed on-chain (chainPollId set) — the
+        // contract is authoritative for their config, so mirror the web app's behavior here.
+        if (mergedPoll?.chainPollId) {
+          const chainDetails = await getPollDetailsFromChain(mergedPoll.chainPollId);
+          if (chainDetails) {
+            mergedPoll = {
+              ...mergedPoll,
+              voteType: chainDetails.voteType,
+              maxChoices: chainDetails.maxChoices,
+              candidateCount: chainDetails.candidateCount,
+            };
+            if (names.length === 0) names = chainDetails.candidateNames;
+          }
+          if (userAddress) {
+            const [voted, allowed] = await Promise.all([
+              checkHasUserVoted(mergedPoll.chainPollId, userAddress),
+              checkIsAllowedVoter(mergedPoll.chainPollId, userAddress),
+            ]);
+            setHasVoted(voted);
+            setIsAllowedVoter(allowed);
+          }
+        }
+
+        setPoll(mergedPoll);
+        setCandidateNames(names);
       } catch (err) {
         console.error('Failed to load poll:', err);
       } finally {
@@ -61,11 +89,16 @@ export default function PollDetails() {
       }
     };
     fetchData();
-  }, [pollId]);
+  }, [pollId, userAddress]);
 
   const handleVote = async () => {
     if (!isConnected || userRole === 'Guest') {
       setPopupContent({ title: 'Login Required', message: 'Please log in to vote in this poll.' });
+      setPopupOpen(true);
+      return;
+    }
+    if (poll?.chainPollId && !isAllowedVoter) {
+      setPopupContent({ title: 'Not Eligible', message: 'You are not an allowed voter for this poll.' });
       setPopupOpen(true);
       return;
     }
@@ -162,6 +195,18 @@ export default function PollDetails() {
             </View>
           )}
 
+          {isConnected && poll.chainPollId && !isAllowedVoter && !hasVoted && (
+            <View className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+              <Text className="text-sm font-semibold text-amber-800">You are not an allowed voter for this poll.</Text>
+            </View>
+          )}
+
+          {hasVoted && (
+            <View className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+              <Text className="text-sm font-semibold text-emerald-800">You have already voted in this poll.</Text>
+            </View>
+          )}
+
           <InfoBanner
             startDate={new Date(poll.startDate).toLocaleDateString()}
             endDate={new Date(poll.endDate).toLocaleDateString()}
@@ -217,7 +262,7 @@ export default function PollDetails() {
 
             <Pressable
               onPress={handleVote}
-              disabled={selected.length === 0 || isSubmitting || !isConnected}
+              disabled={selected.length === 0 || isSubmitting || !isConnected || hasVoted || (poll.chainPollId && !isAllowedVoter)}
               className={`px-6 py-3.5 rounded-xl flex-row items-center gap-2 ${
                 selected.length > 0 && !isSubmitting ? 'bg-white' : 'bg-slate-800'
               }`}

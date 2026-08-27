@@ -1,24 +1,35 @@
 import { useState } from 'react';
-import { View, Text, Pressable, Image, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, Image, ActivityIndicator, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Wallet, User, HelpCircle, Lock, CheckCircle2, LogOut, ArrowRight } from 'lucide-react-native';
+import { Wallet, User, HelpCircle, Lock, CheckCircle2, LogOut, ArrowRight, Mail } from 'lucide-react-native';
 import { useAuth } from '../src/context/AuthContext';
 
 export default function Signup() {
   const router = useRouter();
-  const { isConnected, userAddress, connectWallet, disconnect } = useAuth();
-  const [connecting, setConnecting] = useState(false);
+  const { isConnected, userAddress, connecting, authError, loginWithGoogle, loginWithEmail, disconnect } = useAuth();
   const [disconnecting, setDisconnecting] = useState(false);
+  const [showEmailField, setShowEmailField] = useState(false);
+  const [email, setEmail] = useState('');
 
   const formatAddress = (addr) => (addr ? `${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}` : '');
 
-  const handleConnect = async () => {
-    setConnecting(true);
-    await new Promise((r) => setTimeout(r, 600));
-    await connectWallet('User');
-    setConnecting(false);
+  const handleGoogle = async () => {
+    try {
+      await loginWithGoogle();
+    } catch {
+      // authError from context already surfaces the message
+    }
+  };
+
+  const handleEmailSubmit = async () => {
+    if (!email.trim()) return;
+    try {
+      await loginWithEmail(email.trim());
+    } catch {
+      // authError from context already surfaces the message
+    }
   };
 
   const handleDisconnect = async () => {
@@ -58,30 +69,71 @@ export default function Signup() {
 
             <View className="items-center mb-2">
               <Text className="text-[22px] font-bold text-brand-navy mb-3 text-center">
-                {!isConnected ? 'Connect Your Wallet' : 'Dashboard Profile'}
+                {!isConnected ? 'Login with Web3Auth' : 'Dashboard Profile'}
               </Text>
               <Text className="text-slateText text-[15px] leading-relaxed mb-8 text-center px-2">
                 {!isConnected
-                  ? 'Connect your wallet securely to participate in the upcoming voting session.'
+                  ? 'Sign in securely to participate in the upcoming voting session.'
                   : 'Welcome to quick voting system'}
               </Text>
             </View>
 
             {!isConnected ? (
-              <Pressable
-                onPress={handleConnect}
-                disabled={connecting}
-                className="w-full bg-brand-blue active:bg-brand-blueDark rounded-xl py-3.5 px-4 flex-row items-center justify-center gap-3 shadow-sm"
-              >
-                {connecting ? (
-                  <ActivityIndicator color="#fff" />
+              <View className="gap-3">
+                <Pressable
+                  onPress={handleGoogle}
+                  disabled={connecting}
+                  className="w-full bg-brand-blue active:bg-brand-blueDark rounded-xl py-3.5 px-4 flex-row items-center justify-center gap-3 shadow-sm"
+                >
+                  {connecting ? <ActivityIndicator color="#fff" /> : <Wallet size={18} color="#fff" />}
+                  <Text className="text-white font-semibold text-[15px]">
+                    {connecting ? 'Connecting...' : 'Continue with Google'}
+                  </Text>
+                </Pressable>
+
+                {!showEmailField ? (
+                  <Pressable
+                    onPress={() => setShowEmailField(true)}
+                    disabled={connecting}
+                    className="w-full bg-white border border-slate-200 active:bg-slate-50 rounded-xl py-3.5 px-4 flex-row items-center justify-center gap-3"
+                  >
+                    <Mail size={18} color="#334155" />
+                    <Text className="text-slate-700 font-semibold text-[15px]">Continue with Email</Text>
+                  </Pressable>
                 ) : (
-                  <Wallet size={18} color="#fff" />
+                  <View className="gap-2">
+                    <TextInput
+                      value={email}
+                      onChangeText={setEmail}
+                      placeholder="you@example.com"
+                      placeholderTextColor="#94a3b8"
+                      autoCapitalize="none"
+                      keyboardType="email-address"
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm text-slate-800"
+                    />
+                    <Pressable
+                      onPress={handleEmailSubmit}
+                      disabled={connecting || !email.trim()}
+                      className={`w-full rounded-xl py-3.5 px-4 flex-row items-center justify-center gap-3 ${
+                        connecting || !email.trim() ? 'bg-slate-300' : 'bg-brand-blue active:bg-brand-blueDark'
+                      }`}
+                    >
+                      {connecting ? (
+                        <ActivityIndicator color="#fff" />
+                      ) : (
+                        <Mail size={18} color="#fff" />
+                      )}
+                      <Text className="text-white font-semibold text-[15px]">
+                        {connecting ? 'Connecting...' : 'Send Login Link'}
+                      </Text>
+                    </Pressable>
+                  </View>
                 )}
-                <Text className="text-white font-semibold text-[15px]">
-                  {connecting ? 'Connecting...' : 'Connect Wallet'}
-                </Text>
-              </Pressable>
+
+                {authError && (
+                  <Text className="text-rose-500 text-xs text-center mt-1">{authError}</Text>
+                )}
+              </View>
             ) : (
               <View>
                 <View className="w-full bg-bg-panel border border-slate-100 rounded-xl py-2.5 px-4 flex-row items-center justify-center gap-2 mb-6">

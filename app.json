@@ -8,7 +8,8 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.quickvoting.mobile"
     },
     "android": {
       "package": "com.quickvoting.mobile",
@@ -19,8 +20,18 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       }
     },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
     "extra": {
-      "apiUrl": "https://unbutton-dislodge-playoff.ngrok-free.dev"
+      "apiUrl": "https://unbutton-dislodge-playoff.ngrok-free.dev",
+      "web3authClientId": "BA2my2E_cymvCXVdJcYK-ZgN_P3jPjgYfRX3KvSGiOrVx5fh6Y0EDEOIO8M07q5ovPiLGsri_7edDBmXGeFe-ek",
+      "sepoliaRpcUrl": "https://sepolia.infura.io/v3/f0a0d568e05f4039a40c6c341c01cf93",
+      "contractAddress": "0xfa746708C5A286BEaC5249198E87B7De4f8b4fcE",
+      "router": {},
+      "eas": {
+        "projectId": "d6e339d1-9eea-498d-8003-3f868359b233"
+      }
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -29,7 +40,10 @@
     "plugins": [
       "expo-router",
       "expo-status-bar",
-      "@react-native-community/datetimepicker"
-    ]
+      "@react-native-community/datetimepicker",
+      "expo-web-browser",
+      "expo-secure-store"
+    ],
+    "owner": "mayaex"
   }
 }

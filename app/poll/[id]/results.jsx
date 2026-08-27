@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Trophy, CheckCircle2 } from 'lucide-react-native';
 import ScreenLayout from '../../../src/components/layout/ScreenLayout';
 import { fetchPollDetails, fetchTallyResult } from '../../../src/api/client';
+import { getPollDetailsFromChain, getPollWinnerFromChain } from '../../../src/chain/readFromChain';
 
 export default function PollResults() {
   const { id } = useLocalSearchParams();
@@ -20,11 +21,26 @@ export default function PollResults() {
         const pollRes = await fetchPollDetails(id);
         setPoll(pollRes.poll);
 
-        try {
-          const tallyRes = await fetchTallyResult(id);
-          setWinner(tallyRes.tallyResult?.winnerCandidate?.name || null);
-        } catch {
-          setWinner(null);
+        if (pollRes.poll?.chainPollId) {
+          // On-chain polls are finalized on-chain — the backend tally-results endpoint is
+          // never populated for them, so read the winner directly from the contract instead.
+          try {
+            const [chainDetails, winnerIndex] = await Promise.all([
+              getPollDetailsFromChain(pollRes.poll.chainPollId),
+              getPollWinnerFromChain(pollRes.poll.chainPollId),
+            ]);
+            const names = chainDetails?.candidateNames || [];
+            setWinner(winnerIndex != null && names[winnerIndex] ? names[winnerIndex] : null);
+          } catch {
+            setWinner(null);
+          }
+        } else {
+          try {
+            const tallyRes = await fetchTallyResult(id);
+            setWinner(tallyRes.tallyResult?.winnerCandidate?.name || null);
+          } catch {
+            setWinner(null);
+          }
         }
       } catch (err) {
         console.error('Error fetching poll results:', err);
